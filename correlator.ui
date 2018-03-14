@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
+    <width>877</width>
     <height>600</height>
    </rect>
   </property>
@@ -43,12 +43,18 @@
             <property name="text">
              <string>Add Image</string>
             </property>
+            <property name="icon">
+             <iconset theme="list-add"/>
+            </property>
            </widget>
           </item>
           <item>
            <widget class="QToolButton" name="removeImageButton">
             <property name="text">
              <string>Remove Image</string>
+            </property>
+            <property name="icon">
+             <iconset theme="list-remove"/>
             </property>
            </widget>
           </item>
@@ -57,12 +63,18 @@
             <property name="text">
              <string>Move Image Up</string>
             </property>
+            <property name="icon">
+             <iconset theme="go-up"/>
+            </property>
            </widget>
           </item>
           <item>
            <widget class="QToolButton" name="toolButton_3">
             <property name="text">
              <string>Move Image Down</string>
+            </property>
+            <property name="icon">
+             <iconset theme="go-down"/>
             </property>
            </widget>
           </item>
@@ -120,7 +132,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>877</width>
      <height>25</height>
     </rect>
    </property>
