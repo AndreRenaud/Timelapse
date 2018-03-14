@@ -12,7 +12,7 @@
 
 from PyQt5.QtWidgets import (QWidget, QHBoxLayout, QFrame,
     QSplitter, QStyleFactory, QApplication, QLabel, QScrollArea, QMainWindow, QFileDialog)
-from PyQt5 import (QtCore, uic)
+from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QRect
 from PyQt5.QtGui import (QPixmap, QPainter, QBrush, QColor, QPen, QImage)
@@ -21,6 +21,7 @@ import json
 import numpy as np
 import sys
 import signal
+from correlator_ui import Ui_MainWindow
 
 class DragScroll(QScrollArea):
     def __init__(self, parent):
@@ -49,9 +50,6 @@ class DragScroll(QScrollArea):
         h.setSliderPosition(h.sliderPosition() + xoff)
         v = self.verticalScrollBar()
         v.setSliderPosition(v.sliderPosition() + yoff)
-
-    def scaleScrollBars(self, scale):
-        print("scaleScrollBarS", scale)
 
 class ImageLabel(QLabel):
     def __init__(self, parent):
@@ -134,7 +132,6 @@ class ImageLabel(QLabel):
         print("Rescaled to", self.scaleSetting, scale)
         size = self.pixmap().size() * scale
         self.resize(size)
-        self.parent().scaleScrollBars(scale)
 
     def wheelEvent(self, event):
         if event.angleDelta().y() > 0:
@@ -212,14 +209,14 @@ class ImageLabel(QLabel):
         if i < 0 and event.buttons() == Qt.LeftButton:
             self.setSelected(-1)
 
-class CorrelationApp(QMainWindow):
+class CorrelationApp(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
 
         self.initUI()
 
     def initUI(self):
-        uic.loadUi('correlator.ui', self)
+        self.setupUi(self)
 
         self.left = ImageLabel(self)
         self.left.setFrameShape(QFrame.StyledPanel)
