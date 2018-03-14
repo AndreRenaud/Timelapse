@@ -21,6 +21,7 @@ import json
 import numpy as np
 import sys
 import signal
+import shutil
 from correlator_ui import Ui_MainWindow
 
 class DragScroll(QScrollArea):
@@ -396,6 +397,36 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
             print("Cropped to", file)
 
         print("Done warping")
+
+        self.produceAlphaImages()
+
+    def produceAlphaImages(self):
+        # Go through cropped images, and produce a new set of alpha morphed intermediary images,
+        index=0
+        for i in range(len(self.project["images"]) - 1):
+            # We want to stall on the actual images, so duplicate them a few times
+            f1 = "cropped-%3.3d.png" % (i)
+            for j in range(20):
+                out="alpha-%4.4d.png" % (index)
+                index = index+1
+                shutil.copyfile(f1, out)
+            f2 = "cropped-%3.3d.png" % (i + 1)
+            img1 = cv2.imread(f1)
+            img2 = cv2.imread(f2)
+            for j in range(20):
+                weight = j / 20.0
+                out="alpha-%4.4d.png" % (index)
+                index= index+1
+                dst = cv2.addWeighted(img1, 1 - weight, img2, weight, 0)
+                cv2.imwrite(out, dst)
+        # The last image isn't done above
+        for j in range(20):
+            out="alpha-%4.4d.png" % (index)
+            index= index+1
+            f1 = "cropped-%3.3d.png" % (len(self.project["images"]) - 1)
+            shutil.copyfile(f1, out)
+        print("Done producing alpha images")
+
 
     def autoCorrelate(self):
         '''Try and find the correlation points automatically'''
