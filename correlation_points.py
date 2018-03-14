@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (QWidget, QHBoxLayout, QFrame,
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QRect
-from PyQt5.QtGui import (QPixmap, QPainter, QBrush, QColor, QPen, QImage)
+from PyQt5.QtGui import (QPixmap, QPainter, QBrush, QColor, QPen, QImage, QStandardItemModel, QStandardItem)
 import cv2
 import json
 import numpy as np
@@ -29,11 +29,9 @@ class DragScroll(QScrollArea):
         self.last_pos=(-1, -1)
 
     def mousePressEvent(self, event):
-        print("Resetting last pos press")
         self.last_pos = (-1, -1)
 
     def mouseReleaseEvent(self, event):
-        print("Resetting last pos")
         self.last_pos = (-1, -1)
 
     def mouseMoveEvent(self, event):
@@ -54,18 +52,24 @@ class DragScroll(QScrollArea):
 class ImageLabel(QLabel):
     def __init__(self, parent):
         super(ImageLabel, self).__init__(parent)
-        self.orig_pixmap = None
         self.scaleSetting = 0
         self.setScaledContents(True)
         self.points=[]
         self.selectedPoint = -1
         self.peer = None
         self.dragging = -1
+        self.filename = None
 
-    def setPixmap(self, pixmap):
-        self.orig_pixmap = QPixmap(pixmap)
-        super(ImageLabel, self).setPixmap(pixmap)
-        self.setScaledContents(True)
+    def loadImage(self, filename):
+        self.filename = filename
+        pixmap = None
+        if filename != None:
+            pixmap = QPixmap(filename)
+            self.setPixmap(pixmap)
+            self.setScaledContents(True)
+        else:
+            self.clear()
+        self.points=[]
 
     def getDistinctColor(self, index):
         colors = [(230, 25, 75), (60, 180, 75), (255, 225, 25),
@@ -82,6 +86,8 @@ class ImageLabel(QLabel):
         return QColor((index * 120) % 255, (index * 873) % 255, (index * 375) % 255)
 
     def paintEvent(self, event):
+        if self.pixmap() == None:
+            return
         painter = QPainter()
         painter.begin(self)
         scale = 1.1**self.scaleSetting
@@ -129,7 +135,6 @@ class ImageLabel(QLabel):
         self.scaleSetting += factor
         self.scaleSetting = max(min(self.scaleSetting, 20), -20)
         scale = 1.1**self.scaleSetting
-        print("Rescaled to", self.scaleSetting, scale)
         size = self.pixmap().size() * scale
         self.resize(size)
 
@@ -138,13 +143,6 @@ class ImageLabel(QLabel):
             self.scaleImage(1)
         if event.angleDelta().y() < 0:
             self.scaleImage(-1)
-            #u = self.orig_pixmap.scaledToHeight(self.pixmap().height() / 1.1)
-            #self.setPixmap(QPixmap(u))
-
-        #print(event)
-        #print(event.x(), event.y())
-        #print(event.pixelDelta())
-        #print(event.angleDelta())
 
     def findPointAt(self, x, y):
         for i in range(len(self.points)):
@@ -159,8 +157,6 @@ class ImageLabel(QLabel):
         self.peer = peer
 
     def setSelected(self, index, propogate = True):
-        if index != -1:
-            print("Selecting", index)
         self.selectedPoint = index
         if self.peer != None and propogate:
             self.peer.setSelected(index, False)
@@ -182,7 +178,6 @@ class ImageLabel(QLabel):
     def mouseDoubleClickEvent(self, event):
         if event.button() != Qt.LeftButton:
             return
-        print("double click", event)
         scale = 1.1**self.scaleSetting
         x = event.x() / scale
         y = event.y() / scale
@@ -194,12 +189,9 @@ class ImageLabel(QLabel):
         x = event.x() / scale
         y = event.y() / scale
         i = self.findPointAt(x, y)
-        #print("Point at", event.x(), event.y(), "scaled",x,y,"is",i)
         if i >= 0:
             p = self.points[i]
-            #print("Contains", p)
             if event.buttons() == Qt.RightButton:
-                #print("Removing", x, y, p)
                 self.removePoint(i)
                 self.peer.removePoint(i)
                 self.repaint()
@@ -214,6 +206,7 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
         super().__init__()
 
         self.initUI()
+        self.resetProject()
 
     def initUI(self):
         self.setupUi(self)
@@ -233,34 +226,81 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
 
         self.autoCorrelateButton.clicked.connect(self.autoCorrelate)
         self.warpImagesButton.clicked.connect(self.warpImages)
+        self.addImageButton.clicked.connect(self.addImage)
+        self.removeImageButton.clicked.connect(self.removeImage)
         self.action_Save_Project.triggered.connect(self.saveProject)
         self.action_Load_Project.triggered.connect(self.loadProject)
+        self.imagesList.clicked.connect(self.selectImage)
+
+    def resetProject(self):
+        self.project = {"images":[], "points": {}}
+
+    def selectImage(self, event):
+        self.loadImages(event.row())
+
+    def addImage(self):
+        fname,wildcard = QFileDialog.getOpenFileName(self, 'Load Image')
+        if fname == "":
+            return
+        self.project["images"].append(fname)
+        self.updateImagesList()
+
+    def removeImage(self):
+        # Find selected item from self.imagesList, and remove it from self.project.images
+        pass
+
+    def updateImagesList(self):
+        model = QStandardItemModel(self.imagesList)
+        for i in self.project["images"]:
+            item = QStandardItem(i)
+            item.setEditable(False)
+            model.appendRow(item)
+        self.imagesList.setModel(model)
 
     def saveProject(self):
         fname,wildcard = QFileDialog.getSaveFileName(self, 'Save Project')
-        print('fname',fname)
         if fname == "":
             return
+        self.updateProject()
         with open(fname, 'w') as outfile:
-            json.dump({'left': self.left.points, 'right': self.right.points}, outfile)
+            json.dump(self.project, outfile)
 
     def loadProject(self):
         fname,wildcard = QFileDialog.getOpenFileName(self, 'Load Project')
-        print('fname',fname)
         if fname == "":
             return
         with open(fname) as infile:
-            data = json.load(infile)
-            self.right.points = data['right']
-            self.left.points = data['left']
-            self.right.repaint()
-            self.left.repaint()
+            self.project = json.load(infile)
+            self.updateImagesList()
+            self.right.loadImage(None)
+            self.left.loadImage(None)
 
-    def setImages(self, image1, image2):
-        p1 = QPixmap(image1)
-        p2 = QPixmap(image2)
-        self.left.setPixmap(p1)
-        self.right.setPixmap(p2)
+    def updateProject(self):
+        oldimg1 = self.left.filename
+        oldimg2 = self.right.filename
+        if oldimg1 != None and oldimg2 != None:
+            pindex = "%s,%s" % (oldimg1, oldimg2)
+            self.project["points"][pindex] = (self.left.points, self.right.points)
+
+    def loadImages(self, index):
+        print("Loading images", index)
+        if index >= len(self.project["images"]) or index <= 0:
+            # Invalid
+            return
+        self.updateProject()
+        img1 = self.project["images"][0]
+        img2 = self.project["images"][index]
+        self.left.loadImage(img1)
+        self.right.loadImage(img2)
+
+        pindex = "%s,%s" % (img1, img2)
+        if pindex in self.project["points"]:
+            points = self.project["points"][pindex]
+            print("Loading points", points)
+            self.left.points = points[0]
+            self.right.points = points[1]
+
+        # Should be restoring the left/right points from the saved ones
 
     def getPoints(self, im1, im2, max_points):
         # Convert images to grayscale
@@ -301,22 +341,61 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
         return np.array(ptr).reshape(img.height(), int(img.bytesPerLine() / 4), 4)
 
     def warpImages(self):
-        mat1 = self.pixmapToMat(self.left.pixmap())
-        mat2 = self.pixmapToMat(self.right.pixmap())
+        self.updateProject()
 
-        p1 = np.array(self.left.points, dtype=np.float32)
-        p2 = np.array(self.right.points, dtype=np.float32)
+        # The first file goes across unchanged
+        img = cv2.imread(self.project["images"][0])
+        cv2.imwrite("warped-000.png", img)
+        bounding=None
+        for i in range(1,len(self.project["images"])):
+            img1 = self.project["images"][0]
+            img2 = self.project["images"][i]
+            pixmap1 = QPixmap(img1)
+            pixmap2 = QPixmap(img2)
+            mat1 = self.pixmapToMat(pixmap1)
+            mat2 = self.pixmapToMat(pixmap2)
+            if bounding == None:
+                bounding = (0, 0, pixmap1.width() - 1, pixmap1.height() - 1)
+            key="%s,%s" % (img1, img2)
+            if key in self.project["points"]:
+                p1 = np.array(self.project["points"][key][0], dtype=np.float32)
+                p2 = np.array(self.project["points"][key][1], dtype=np.float32)
 
-        # Find homography
-        h, mask = cv2.findHomography(p1, p2, cv2.RANSAC)
+                # Find homography
+                h, mask = cv2.findHomography(p2, p1, cv2.RANSAC)
+                # Use homography
+                height, width, channels = mat1.shape
 
-        # Use homography
-        height, width, channels = mat2.shape
-        warped = cv2.warpPerspective(mat1, h, (width, height))
+                # Work out the four corner coordinates for the bounding box
+                m=np.array([[0, 0], [0, height - 1], [width - 1, height - 1], [width - 1, 0]])
+                corners = cv2.perspectiveTransform(np.float32([m]), h)
+                x1, y1 = corners[0][0]
+                x2, y2 = corners[0][2]
+                bounding = (int(max(bounding[0], x1)), int(max(bounding[1], y1)), int(min(bounding[2], x2)), int(min(bounding[3],y2)))
 
-        print("Warped & saved to warped.jpg")
-        cv2.imwrite("warped.jpg", warped)
+                #print("bounding", x1, y1, x2, y2)
+                #bounding = cv2.boundingRect(corners[0])
+                #print("bounding", bounding)
+                warped = cv2.warpPerspective(mat2, h, (width, height), flags=cv2.INTER_NEAREST)
 
+                file = "warped-%3.3d.png" % (i)
+                print("Warped & saved to", file)
+                cv2.imwrite(file, warped)
+
+        print("total bounding", bounding)
+        # Hack to force 640x480 aspect ratio
+        bounding=(641,386,3265,2353)
+
+        # Go through and crop them all
+        for i in range(len(self.project["images"])):
+            file = "warped-%3.3d.png" % (i)
+            img = cv2.imread(file)
+            crop = img[bounding[1]:bounding[3], bounding[0]:bounding[2]]
+            file="cropped-%3.3d.png" % (i)
+            cv2.imwrite(file, crop)
+            print("Cropped to", file)
+
+        print("Done warping")
 
     def autoCorrelate(self):
         '''Try and find the correlation points automatically'''
@@ -337,6 +416,6 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     corr = CorrelationApp()
-    corr.setImages('images/IMG_20171026_161128.jpg', 'images/IMG_20171019_170326.jpg')
+    #corr.loadImages('images/IMG_20171026_161128.jpg', 'images/IMG_20171019_170326.jpg')
     corr.show()
     sys.exit(app.exec_())
