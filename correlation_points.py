@@ -306,8 +306,6 @@ class CorrelationApp(QMainWindow):
     def warpImages(self):
         mat1 = self.pixmapToMat(self.left.pixmap())
         mat2 = self.pixmapToMat(self.right.pixmap())
-        cv2.imwrite("mat1.jpg", mat1)
-        cv2.imwrite("mat2.jpg", mat2)
 
         p1 = np.array(self.left.points, dtype=np.float32)
         p2 = np.array(self.right.points, dtype=np.float32)
