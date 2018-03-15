@@ -16,6 +16,23 @@ jobs:
           command: make
       - run:
           name: Build binary
-          command: pyinstaller --onefile correlation_points.py
+          command: pyinstaller --onefile --distpath dist-linux correlation_points.py
       - store_artifacts:
-          path: dist/correlation_points
+          path: dist-linux/correlation_points
+
+  windows:
+    docker:
+      - image: cdrx/pyinstaller-windows
+    steps:
+      - run:
+          name: Install dependencies
+          command: |
+            apt-get updatE && apt-get -y install make
+            pip install pyqt5
+      - run:
+        name: Build binary
+        command: |
+            make
+            pyinstaller --onefile --distpath dist-windows correlation_points.py
+      - store_artifacts:
+          path: dist-windows/corelation_points.exe
