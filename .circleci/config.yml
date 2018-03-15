@@ -7,7 +7,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            apt install pyqt5-dev-tools
+            apt update && apt -y install pyqt5-dev-tools
             pip install pyinstaller
       - checkout
       - run:
