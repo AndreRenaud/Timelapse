@@ -285,12 +285,13 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
 
     def loadImages(self, index):
         print("Loading images", index)
-        if index >= len(self.project["images"]) or index <= 0:
+        if index >= len(self.project["images"]) - 1:
+        #if index >= len(self.project["images"]) or index <= 0:
             # Invalid
             return
         self.updateProject()
-        img1 = self.project["images"][0]
-        img2 = self.project["images"][index]
+        img1 = self.project["images"][index]
+        img2 = self.project["images"][index + 1]
         self.left.loadImage(img1)
         self.right.loadImage(img2)
 
@@ -348,9 +349,10 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
         img = cv2.imread(self.project["images"][0])
         cv2.imwrite("warped-000.png", img)
         bounding=None
-        for i in range(1,len(self.project["images"])):
-            img1 = self.project["images"][0]
-            img2 = self.project["images"][i]
+        #for i in range(1,len(self.project["images"])):
+        for i in range(len(self.project["images"]) - 1):
+            img1 = self.project["images"][i]
+            img2 = self.project["images"][i + 1]
             pixmap1 = QPixmap(img1)
             pixmap2 = QPixmap(img2)
             mat1 = self.pixmapToMat(pixmap1)
@@ -406,6 +408,7 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
         for i in range(len(self.project["images"]) - 1):
             # We want to stall on the actual images, so duplicate them a few times
             f1 = "cropped-%3.3d.png" % (i)
+            print("Doing alpha for",f1)
             for j in range(20):
                 out="alpha-%4.4d.png" % (index)
                 index = index+1
