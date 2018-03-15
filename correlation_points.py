@@ -11,7 +11,8 @@
 # A button to apply the warp
 
 from PyQt5.QtWidgets import (QWidget, QHBoxLayout, QFrame,
-    QSplitter, QStyleFactory, QApplication, QLabel, QScrollArea, QMainWindow, QFileDialog)
+    QSplitter, QStyleFactory, QApplication, QLabel, QScrollArea, QMainWindow,
+    QFileDialog, QMessageBox)
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QRect
@@ -231,6 +232,7 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
         self.removeImageButton.clicked.connect(self.removeImage)
         self.action_Save_Project.triggered.connect(self.saveProject)
         self.action_Load_Project.triggered.connect(self.loadProject)
+        self.action_About.triggered.connect(self.about)
         self.imagesList.clicked.connect(self.selectImage)
 
     def resetProject(self):
@@ -249,6 +251,10 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
     def removeImage(self):
         # Find selected item from self.imagesList, and remove it from self.project.images
         pass
+
+    def about(self):
+        QMessageBox.about(self, "Correlation Points",
+            "Correlation Points combines similar images into a movie, warping and cropping images such that points of correlation stay lined up")
 
     def updateImagesList(self):
         model = QStandardItemModel(self.imagesList)
