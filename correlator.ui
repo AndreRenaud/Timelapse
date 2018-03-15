@@ -59,7 +59,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QToolButton" name="toolButton_4">
+           <widget class="QToolButton" name="moveUpButton">
             <property name="text">
              <string>Move Image Up</string>
             </property>
@@ -69,7 +69,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QToolButton" name="toolButton_3">
+           <widget class="QToolButton" name="moveDownButton">
             <property name="text">
              <string>Move Image Down</string>
             </property>

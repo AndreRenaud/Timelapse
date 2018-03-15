@@ -230,6 +230,8 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
         self.warpImagesButton.clicked.connect(self.warpImages)
         self.addImageButton.clicked.connect(self.addImage)
         self.removeImageButton.clicked.connect(self.removeImage)
+        self.moveUpButton.clicked.connect(self.moveImageUp)
+        self.moveDownButton.clicked.connect(self.moveImageDown)
         self.action_Save_Project.triggered.connect(self.saveProject)
         self.action_Load_Project.triggered.connect(self.loadProject)
         self.action_About.triggered.connect(self.about)
@@ -244,6 +246,33 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
 
     def selectImage(self, event):
         self.loadImages(event.row())
+
+    def getSelected(self):
+        s = self.imagesList.selectedIndexes()
+        if len(s) > 0:
+            index = s[0].row()
+            selected = self.imagesList.model().item(index).text()
+        else:
+            index = -1
+            selected = ""
+        print("selected:",index,selected)
+        return index, selected
+
+    def moveImageUp(self, event):
+        index, selected = self.getSelected()
+        if index >= 1:
+            self.project["images"][index - 1], self.project["images"][index] = self.project["images"][index], self.project["images"][index - 1]
+            if index == self.project["primary"]:
+                self.project["primary"] = index - 1
+            self.updateImagesList()
+
+    def moveImageDown(self, event):
+        index, selected = self.getSelected()
+        if index < len(self.project["images"]) - 1:
+            self.project["images"][index], self.project["images"][index + 1] = self.project["images"][index + 1], self.project["images"][index]
+            if index == self.project["primary"]:
+                self.project["primary"] = index + 1
+            self.updateImagesList()
 
     def addImage(self):
         fname,wildcard = QFileDialog.getOpenFileName(self, 'Load Image')
@@ -261,14 +290,20 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
             "Correlation Points combines similar images into a movie, warping and cropping images such that points of correlation stay lined up")
 
     def updateImagesList(self):
+        index, selected = self.getSelected()
         model = QStandardItemModel(self.imagesList)
         self.primaryImage.clear()
+        selectedIndex = None
         for i in self.project["images"]:
             item = QStandardItem(i)
             item.setEditable(False)
             model.appendRow(item)
             self.primaryImage.addItem(i)
+            if i == selected:
+                selectedIndex = model.indexFromItem(item)
         self.imagesList.setModel(model)
+        if selectedIndex != None:
+            self.imagesList.setCurrentIndex(selectedIndex)
         if "primary" in self.project:
             self.primaryImage.setCurrentText(self.project["images"][self.project["primary"]])
 
@@ -359,11 +394,13 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
         self.updateProject()
 
         bounding=None
-        for i in len(self.project["images"]):
+        for i in range(len(self.project["images"])):
+            file = "warped-%3.3d.png" % (i)
             if i == self.project["primary"]:
                 # The primary file goes across unchanged
-                img = cv2.imread(self.project["images"][0])
-                cv2.imwrite("warped-000.png", img)
+                img = cv2.imread(self.project["images"][i])
+                cv2.imwrite(file, img)
+                continue
             img1 = self.project["images"][self.project["primary"]]
             img2 = self.project["images"][i]
             pixmap1 = QPixmap(img1)
@@ -395,19 +432,29 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
                 #print("bounding", bounding)
                 warped = cv2.warpPerspective(mat2, h, (width, height), flags=cv2.INTER_NEAREST)
 
-                file = "warped-%3.3d.png" % (i)
-                print("Warped & saved to", file)
+                print("Warped",img2,"& saved to", file)
                 cv2.imwrite(file, warped)
 
-        print("total bounding", bounding)
+        print("total bounding", bounding, "width", bounding[2] - bounding[0], "height", bounding[3] - bounding[1])
         # Hack to force 640x480 aspect ratio
         # bounding=(641,386,3265,2353)
 
-        # Go through and crop them all
+        # Go through and crop them all, and normalise the images at the same time
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
         for i in range(len(self.project["images"])):
             file = "warped-%3.3d.png" % (i)
             img = cv2.imread(file)
             crop = img[bounding[1]:bounding[3], bounding[0]:bounding[2]]
+
+            # Normalise the colours
+            # This works ok, but makes things look a bit flat
+            if 0:
+                lab = cv2.cvtColor(crop, cv2.COLOR_BGR2LAB)
+                lab_planes = cv2.split(lab)
+                lab_planes[0] = clahe.apply(lab_planes[0])
+                lab = cv2.merge(lab_planes)
+                crop = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+
             file="cropped-%3.3d.png" % (i)
             cv2.imwrite(file, crop)
             print("Cropped to", file)
