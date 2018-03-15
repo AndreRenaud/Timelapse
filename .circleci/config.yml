@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build:
+  ubuntu:
     docker:
       - image: ubuntu:18.04
     steps:
@@ -36,3 +36,10 @@ jobs:
             pyinstaller --onefile --distpath dist-windows correlation_points.py
       - store_artifacts:
           path: dist-windows/corelation_points.exe
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - ubuntu
+      - windows
