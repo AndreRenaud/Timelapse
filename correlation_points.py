@@ -261,6 +261,7 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
         for i in self.project["images"]:
             item = QStandardItem(i)
             item.setEditable(False)
+            item.setEnabled(i != 0)
             model.appendRow(item)
         self.imagesList.setModel(model)
 
@@ -291,13 +292,12 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
 
     def loadImages(self, index):
         print("Loading images", index)
-        if index >= len(self.project["images"]) - 1:
-        #if index >= len(self.project["images"]) or index <= 0:
+        if index >= len(self.project["images"]) or index <= 0:
             # Invalid
             return
         self.updateProject()
-        img1 = self.project["images"][index]
-        img2 = self.project["images"][index + 1]
+        img1 = self.project["images"][0]
+        img2 = self.project["images"][index]
         self.left.loadImage(img1)
         self.right.loadImage(img2)
 
@@ -355,10 +355,9 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
         img = cv2.imread(self.project["images"][0])
         cv2.imwrite("warped-000.png", img)
         bounding=None
-        #for i in range(1,len(self.project["images"])):
-        for i in range(len(self.project["images"]) - 1):
-            img1 = self.project["images"][i]
-            img2 = self.project["images"][i + 1]
+        for i in range(1,len(self.project["images"])):
+            img1 = self.project["images"][0]
+            img2 = self.project["images"][i]
             pixmap1 = QPixmap(img1)
             pixmap2 = QPixmap(img2)
             mat1 = self.pixmapToMat(pixmap1)
@@ -380,6 +379,7 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
                 corners = cv2.perspectiveTransform(np.float32([m]), h)
                 x1, y1 = corners[0][0]
                 x2, y2 = corners[0][2]
+                print("bounding for",i,x1,y1,x2,y2)
                 bounding = (int(max(bounding[0], x1)), int(max(bounding[1], y1)), int(min(bounding[2], x2)), int(min(bounding[3],y2)))
 
                 #print("bounding", x1, y1, x2, y2)
@@ -393,7 +393,7 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
 
         print("total bounding", bounding)
         # Hack to force 640x480 aspect ratio
-        bounding=(641,386,3265,2353)
+        # bounding=(641,386,3265,2353)
 
         # Go through and crop them all
         for i in range(len(self.project["images"])):
