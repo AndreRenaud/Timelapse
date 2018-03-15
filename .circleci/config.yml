@@ -27,7 +27,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            apt-get updatE && apt-get -y install make
+            apt-get update && apt-get -y install make
             pip install pyqt5
       - run:
         name: Build binary
