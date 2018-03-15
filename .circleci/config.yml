@@ -29,6 +29,7 @@ jobs:
           command: |
             apt-get update && apt-get -y install make
             pip install pyqt5
+      - checkout
       - run:
           name: Build binary
           command: |
