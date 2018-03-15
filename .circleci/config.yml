@@ -5,8 +5,10 @@ jobs:
       - image: python:3.6-stretch
     steps:
       - run:
-          name: Install python packages
-          command: pip install pyinstaller
+          name: Install dependencies
+          command: |
+            apt install pyqt5-dev-tools
+            pip install pyinstaller
       - checkout
       - run:
           name: Build files
