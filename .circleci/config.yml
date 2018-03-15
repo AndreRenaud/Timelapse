@@ -1,0 +1,18 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: python:3.6-stretch
+    steps:
+      - run:
+          name: Install python packages
+          command: sudo pip install pyinstaller
+      - checkout
+      - run:
+          name: Build files
+          command: make
+      - run:
+          name: Build binary
+          command: pyinstaller --onefile correlation_points.py
+      - store_artifacts:
+          path: dist/correlation_points
