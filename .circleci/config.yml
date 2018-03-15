@@ -36,7 +36,7 @@ jobs:
             make
             pyinstaller --onefile --distpath dist-windows correlation_points.py
       - store_artifacts:
-          path: dist-windows/corelation_points.exe
+          path: dist-windows/correlation_points.exe
 
 workflows:
   version: 2
