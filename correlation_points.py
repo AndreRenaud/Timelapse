@@ -234,9 +234,13 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
         self.action_Load_Project.triggered.connect(self.loadProject)
         self.action_About.triggered.connect(self.about)
         self.imagesList.clicked.connect(self.selectImage)
+        self.primaryImage.activated.connect(self.changePrimaryImage)
 
     def resetProject(self):
-        self.project = {"images":[], "points": {}}
+        self.project = {"images":[], "points": {}, "primary": 0}
+
+    def changePrimaryImage(self, event):
+        self.project["primary"]=int(event)
 
     def selectImage(self, event):
         self.loadImages(event.row())
@@ -258,12 +262,15 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
 
     def updateImagesList(self):
         model = QStandardItemModel(self.imagesList)
+        self.primaryImage.clear()
         for i in self.project["images"]:
             item = QStandardItem(i)
             item.setEditable(False)
-            item.setEnabled(i != 0)
             model.appendRow(item)
+            self.primaryImage.addItem(i)
         self.imagesList.setModel(model)
+        if "primary" in self.project:
+            self.primaryImage.setCurrentText(self.project["images"][self.project["primary"]])
 
     def saveProject(self):
         fname,wildcard = QFileDialog.getSaveFileName(self, 'Save Project')
@@ -292,11 +299,11 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
 
     def loadImages(self, index):
         print("Loading images", index)
-        if index >= len(self.project["images"]) or index <= 0:
+        if index >= len(self.project["images"]) or index == self.project["primary"]:
             # Invalid
             return
         self.updateProject()
-        img1 = self.project["images"][0]
+        img1 = self.project["images"][self.project["primary"]]
         img2 = self.project["images"][index]
         self.left.loadImage(img1)
         self.right.loadImage(img2)
@@ -351,12 +358,13 @@ class CorrelationApp(QMainWindow, Ui_MainWindow):
     def warpImages(self):
         self.updateProject()
 
-        # The first file goes across unchanged
-        img = cv2.imread(self.project["images"][0])
-        cv2.imwrite("warped-000.png", img)
         bounding=None
-        for i in range(1,len(self.project["images"])):
-            img1 = self.project["images"][0]
+        for i in len(self.project["images"]):
+            if i == self.project["primary"]:
+                # The primary file goes across unchanged
+                img = cv2.imread(self.project["images"][0])
+                cv2.imwrite("warped-000.png", img)
+            img1 = self.project["images"][self.project["primary"]]
             img2 = self.project["images"][i]
             pixmap1 = QPixmap(img1)
             pixmap2 = QPixmap(img2)
